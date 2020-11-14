@@ -1,4 +1,10 @@
-param($Path, $AgeInDays = 30, $Simulate = $true)
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory = $true)] [string] $Path,
+    [Parameter(Mandatory = $true)] [int] $AgeInDays,
+    [switch] $DeleteEmptyDirectories,
+    [switch] $WhatIf
+)
 
 function main() {
     Cleanup($Path)
@@ -10,10 +16,22 @@ function Cleanup($path) {
         [int]$ageCreated = (New-TimeSpan $file.CreationTime).TotalDays
         [int]$ageWritten = (New-TimeSpan $file.LastWriteTime).TotalDays
         $age = [Math]::Min($ageCreated, $ageWritten)
+        $size = DisplayInBytes $file.Length
 
-        Write-Host $file.FullName $age (DisplayInBytes $file.Length)
-        if ($age -gt $AgeInDays) { 
-            if (-not $Simulate) { $file.Delete() }
+        if ($age -ge $AgeInDays) {
+            if ($WhatIf.IsPresent) {
+                "WhatIf: Delete file {0} (Age: {1} Size: {2})" -f $file.FullName, $age, $size
+            }
+            else {
+                #$file.Delete()
+            }
+        }
+    }
+
+    if ($DeleteEmptyDirectories) {
+        $dirs = Get-ChildItem $path -Directory -Recurse
+        foreach ($dir in $dirs) {
+
         }
     }
 }
@@ -25,7 +43,6 @@ function DisplayInBytes($num) {
         $num = $num / 1kb
         $index++
     } 
-
     "{0:N0} {1}" -f $num, $suffix[$index]
 }
 

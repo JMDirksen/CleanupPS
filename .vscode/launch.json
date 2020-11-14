@@ -12,12 +12,11 @@
             "cwd": "${file}"
         },
         {
-            "name": "Test (C:\\Test)",
+            "name": "Test",
             "type": "PowerShell",
             "request": "launch",
             "script": "${file}",
-            "args": ["-Path C:\\Test"],
+            "args": ["-Path c:\\test", "-WhatIf"],
             "cwd": "${file}"
-        }
-    ]
+        }    ]
 }
