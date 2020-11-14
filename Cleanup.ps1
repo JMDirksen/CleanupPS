@@ -11,29 +11,43 @@ function main() {
 }
 
 function Cleanup($path) {
-    $files = Get-ChildItem $path -File -Recurse
+    [int] $deletedFiles = 0
+    [int] $deletedBytes = 0
+    [int] $deletedDirectories = 0
+
+    $files = Get-ChildItem -Path $path -File -Recurse
     foreach ($file in $files) {
         [int]$ageCreated = (New-TimeSpan $file.CreationTime).TotalDays
         [int]$ageWritten = (New-TimeSpan $file.LastWriteTime).TotalDays
         $age = [Math]::Min($ageCreated, $ageWritten)
-        $size = DisplayInBytes $file.Length
 
         if ($age -ge $AgeInDays) {
             if ($WhatIf.IsPresent) {
-                "WhatIf: Delete file {0} (Age: {1} Size: {2})" -f $file.FullName, $age, $size
+                "WhatIf: Delete file '{0}' (Age: {1} Size: {2})" -f $file.FullName, $age, (DisplayInBytes $file.Length)
             }
             else {
+                "Delete file '{0}' (Age: {1} Size: {2})" -f $file.FullName, $age, (DisplayInBytes $file.Length)
                 #$file.Delete()
             }
+            $deletedFiles++
+            $deletedBytes += $file.Length
         }
     }
 
-    if ($DeleteEmptyDirectories) {
-        $dirs = Get-ChildItem $path -Directory -Recurse
-        foreach ($dir in $dirs) {
-
+    Get-ChildItem $path -Directory -Recurse | Where-Object { (Get-ChildItem $_.FullName).Count -eq 0 } | ForEach-Object {
+        if ($WhatIf.IsPresent) {
+            "WhatIf: Delete directory '{0}'" -f $_.FullName
         }
+        else {
+            #Remove-Item $_
+            "Deleted directory '{0}'" -f $_.FullName
+        }
+        $deletedDirectories++
     }
+
+    if ($WhatIf.IsPresent) { "WhatIf: Delete {0} files ({1}) and {2} directories" -f $deletedFiles, (DisplayInBytes $deletedBytes), $deletedDirectories }
+    else { "Deleted {0} files ({1}) and {2} directories" -f $deletedFiles, (DisplayInBytes $deletedBytes), $deletedDirectories }
+
 }
 
 function DisplayInBytes($num) {
