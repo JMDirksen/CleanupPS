@@ -1,14 +1,10 @@
 [CmdletBinding()]
-Param(
+Param (
     [Parameter(Mandatory = $true)] [string] $Path,
-    [Parameter(Mandatory = $true)] [int] $AgeInDays,
+    [Parameter(Mandatory = $true)] [ValidateRange(0, 999)] [int] $AgeInDays,
     [switch] $DeleteEmptyDirectories,
     [switch] $WhatIf
 )
-
-function main() {
-    Cleanup($Path)
-}
 
 function Cleanup($path) {
     [int] $deletedFiles = 0
@@ -16,12 +12,12 @@ function Cleanup($path) {
     [int] $deletedDirectories = 0
 
     # Cleanup Files
-    Get-ChildItem -Path $path -File -Recurse | OldFiles | ForEach-Object {
+    Get-ChildItem -Path $path -File -Recurse -Attributes Archive, Normal, Hidden, System | OldFiles | ForEach-Object {
         if ($WhatIf.IsPresent) {
             "WhatIf: Delete file '{0}' (Age: {1} Size: {2})" -f $_.FullName, $_.Age, (FormatBytes $_.Length)
         }
         else {
-            #$_.Delete()
+            Remove-Item $_.FullName -Force
             "Deleted file '{0}' (Age: {1} Size: {2})" -f $_.FullName, $_.Age, (FormatBytes $_.Length)
         }
         $deletedFiles++
@@ -29,15 +25,17 @@ function Cleanup($path) {
     }
 
     # Cleanup Directories
-    Get-ChildItem $path -Directory -Recurse | EmptyDirectories | ForEach-Object {
-        if ($WhatIf.IsPresent) { 
-            "WhatIf: Delete directory '{0}'" -f $_.FullName
+    if ($DeleteEmptyDirectories) {
+        Get-ChildItem $path -Directory -Recurse | EmptyDirectories | ForEach-Object {
+            if ($WhatIf.IsPresent) { 
+                "WhatIf: Delete directory '{0}'" -f $_.FullName
+            }
+            else {
+                Remove-Item $_.FullName -Recurse
+                "Deleted directory '{0}'" -f $_.FullName
+            }
+            $deletedDirectories++
         }
-        else {
-            #Remove-Item $_
-            "Deleted directory '{0}'" -f $_.FullName
-        }
-        $deletedDirectories++
     }
 
     # Summery
@@ -54,7 +52,7 @@ filter OldFiles {
 }
 
 filter EmptyDirectories {
-    if ((Get-ChildItem $_.FullName -Recurse -File -Attributes Archive,Normal,Hidden,System).Count -eq 0) { $_ }
+    if ((Get-ChildItem $_.FullName -Recurse -File -Attributes Archive, Normal, Hidden, System).Count -eq 0) { $_ }
 }
 
 function FormatBytes($bytes) {
@@ -67,4 +65,4 @@ function FormatBytes($bytes) {
     "{0:N0} {1}" -f $bytes, $suffix[$index]
 }
 
-main
+Cleanup($Path)

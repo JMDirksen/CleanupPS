@@ -16,7 +16,7 @@
             "type": "PowerShell",
             "request": "launch",
             "script": "${file}",
-            "args": ["-Path c:\\test", "-WhatIf"],
+            "args": ["-DeleteEmptyDirectories"],
             "cwd": "${file}"
         }    ]
 }
